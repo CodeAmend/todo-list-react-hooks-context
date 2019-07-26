@@ -9,12 +9,24 @@ const makeTodo = todo => ({
   ...todo
 });
 
+export const StoreContext = React.createContext();
 
-export const TodoContext = React.createContext();
+function StoreProvider({ initialState, children }) {
+  const [state, setState] = React.useState(initialState);
 
-function TodoProvider({ children }) {
+  const immerSetState = updater => setState(old => immer(old, updater));
 
-  const initialState = [
+  const contextValue = React.useMemo(() => [state, immerSetState], [state]);
+
+  return (
+    <StoreContext.Provider value={contextValue}>
+      {children}
+    </StoreContext.Provider>
+  )
+}
+
+const initialState = {
+  todos: [
     makeTodo({
       name: "Milk"
     }),
@@ -27,31 +39,16 @@ function TodoProvider({ children }) {
     }),
     makeTodo({
       name: "Syrup"
-    })
-  ];
-
-  const [todos, setTodos] = React.useState(initialState);
-
-  const [filterType, setFilterType] = React.useState('pending');
-
-  const initialContext = React.useMemo(() => ({
-    todos, setTodos, filterType, setFilterType
-  }),
-    [ todos, setTodos, filterType, setFilterType ]
-  );
-
-  return (
-    <TodoContext.Provider value={initialContext}>
-      {children}
-    </TodoContext.Provider>
-  )
-}
+    }),
+  ],
+  filterType: 'pending',
+};
 
 export default function App() {
 
   return (
     // Every Context Provider passes a new object or function execution
-    <TodoProvider>
+    <StoreProvider initialState={initialState}>
       <div>
         <FilterBar />
         <br />
@@ -59,26 +56,32 @@ export default function App() {
         <br />
         <AddTodo />
       </div>
-    </TodoProvider>
+    </StoreProvider>
   );
 }
 
 function FilterBar() {
 
-  const { filterType, setFilterType } = React.useContext(TodoContext);
+  const [{ filterType }, setStore ] = React.useContext(StoreContext);
+
+  const handleFilterTypeChange = type => {
+    setStore(draft => {
+      draft.filterType = type;
+    })
+  }
 
   return (
     <div>
       <Filter
-        onClick={() => setFilterType('pending')}
+        onClick={() => handleFilterTypeChange('pending')}
         active={filterType === 'pending'}
       > Pending </Filter>
       <Filter
-        onClick={() => setFilterType('done')}
+        onClick={() => handleFilterTypeChange('done')}
         active={filterType === 'done'}
       > Done </Filter>
       <Filter
-        onClick={() => setFilterType('all')}
+        onClick={() => handleFilterTypeChange('all')}
         active={filterType === 'all'}
       > All </Filter>
     </div>
@@ -98,7 +101,7 @@ function Filter({ active, children, ...rest }) {
 }
 
 function Todos() {
-  const { filterType, todos, setTodos } = React.useContext(TodoContext);
+  const [{ filterType, todos }] = React.useContext(StoreContext);
 
   let filteredTodos;
 
@@ -113,6 +116,7 @@ function Todos() {
       filteredTodos = todos;
       break;
   }
+
   return (
     <Flash
       type="div"
@@ -121,20 +125,20 @@ function Todos() {
       }}
     >
       {filteredTodos.map(todo => (
-        <Todo key={todo.id} {...todo} setTodos={setTodos} />
+        <Todo key={todo.id} {...todo} />
       ))}
     </Flash>
   );
 }
 
 function Todo({ id, name, done }) {
-  const { setTodos } = React.useContext(TodoContext);
+  const [, setStore] = React.useContext(StoreContext);
 
   const handleToggle = () => {
-    setTodos(oldTodos => immer(oldTodos, draft => {
-      const todo = draft.find(d => d.id === id);
+    setStore(draft => {
+      const todo = draft.todos.find(d => d.id === id);
       todo.done = !todo.done;
-    }));
+    });
   }
 
   return (
@@ -148,16 +152,15 @@ function Todo({ id, name, done }) {
 }
 
 function AddTodo() {
-  const { setTodos } = React.useContext(TodoContext);
+  const [, setTodos] = React.useContext(StoreContext);
   const [value, setValue] = React.useState("");
 
   const addTodo = () => {
-    setTodos(old => ([
-      ...old,
-      makeTodo({ name: value }),
-    ]))
+    setTodos(draft => {
+      draft.todos.push(makeTodo({ name: value }))
+    });
     setValue('');
-  }
+  };
 
   const handleSubmit = e => {
     e.preventDefault();
