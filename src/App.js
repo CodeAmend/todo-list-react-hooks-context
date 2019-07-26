@@ -9,26 +9,29 @@ const makeTodo = todo => ({
   ...todo
 });
 
-const TodoContext = React.createContext();
 
-const initialState = [
-  makeTodo({
-    name: "Milk"
-  }),
-  makeTodo({
-    name: "Eggs"
-  }),
-  makeTodo({
-    name: "Flour",
-    done: true
-  }),
-  makeTodo({
-    name: "Syrup"
-  })
-];
+export const TodoContext = React.createContext();
 
-export default function App() {
+function TodoProvider({ children }) {
+
+  const initialState = [
+    makeTodo({
+      name: "Milk"
+    }),
+    makeTodo({
+      name: "Eggs"
+    }),
+    makeTodo({
+      name: "Flour",
+      done: true
+    }),
+    makeTodo({
+      name: "Syrup"
+    })
+  ];
+
   const [todos, setTodos] = React.useState(initialState);
+
   const [filterType, setFilterType] = React.useState('pending');
 
   const initialContext = React.useMemo(() => ({
@@ -38,8 +41,17 @@ export default function App() {
   );
 
   return (
-    // Every Context Provider passes a new object or function execution
     <TodoContext.Provider value={initialContext}>
+      {children}
+    </TodoContext.Provider>
+  )
+}
+
+export default function App() {
+
+  return (
+    // Every Context Provider passes a new object or function execution
+    <TodoProvider>
       <div>
         <FilterBar />
         <br />
@@ -47,7 +59,7 @@ export default function App() {
         <br />
         <AddTodo />
       </div>
-    </TodoContext.Provider>
+    </TodoProvider>
   );
 }
 
