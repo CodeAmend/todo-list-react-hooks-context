@@ -9,6 +9,8 @@ const makeTodo = todo => ({
   ...todo
 });
 
+const TodoContext = React.createContext();
+
 const initialState = [
   makeTodo({
     name: "Milk"
@@ -29,18 +31,29 @@ export default function App() {
   const [todos, setTodos] = React.useState(initialState);
   const [filterType, setFilterType] = React.useState('pending');
 
+  const initialContext = React.useMemo(() => ({
+    todos, setTodos, filterType, setFilterType
+  }),
+    [ todos, setTodos, filterType, setFilterType ]
+  );
+
   return (
-    <div>
-      <FilterBar filterType={filterType} setFilterType={setFilterType} />
-      <br />
-      <Todos todos={todos} filterType={filterType} setTodos={setTodos} />
-      <br />
-      <AddTodo setTodos={setTodos} />
-    </div>
+    // Every Context Provider passes a new object or function execution
+    <TodoContext.Provider value={initialContext}>
+      <div>
+        <FilterBar />
+        <br />
+        <Todos />
+        <br />
+        <AddTodo />
+      </div>
+    </TodoContext.Provider>
   );
 }
 
-function FilterBar({ filterType, setFilterType }) {
+function FilterBar() {
+
+  const { filterType, setFilterType } = React.useContext(TodoContext);
 
   return (
     <div>
@@ -72,7 +85,9 @@ function Filter({ active, children, ...rest }) {
   );
 }
 
-function Todos({ todos, setTodos, filterType }) {
+function Todos() {
+  const { filterType, todos, setTodos } = React.useContext(TodoContext);
+
   let filteredTodos;
 
   switch (filterType) {
@@ -100,7 +115,9 @@ function Todos({ todos, setTodos, filterType }) {
   );
 }
 
-function Todo({ id, name, done, setTodos }) {
+function Todo({ id, name, done }) {
+  const { setTodos } = React.useContext(TodoContext);
+
   const handleToggle = () => {
     setTodos(oldTodos => immer(oldTodos, draft => {
       const todo = draft.find(d => d.id === id);
@@ -118,8 +135,8 @@ function Todo({ id, name, done, setTodos }) {
   );
 }
 
-function AddTodo({ setTodos }) {
-
+function AddTodo() {
+  const { setTodos } = React.useContext(TodoContext);
   const [value, setValue] = React.useState("");
 
   const addTodo = () => {
