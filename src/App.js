@@ -4,14 +4,12 @@ import immer from 'immer';
 import Flash from "./components/Flash";
 
 
-const makeTodo = todo => ({
-  id: Math.ceil(Math.random() * 100000),
-  ...todo
-});
 
-export const StoreContext = React.createContext();
+
+const StoreContext = React.createContext();
 
 function StoreProvider({ initialState, children }) {
+
   const [state, setState] = React.useState(initialState);
 
   const immerSetState = updater => setState(old => immer(old, updater));
@@ -23,6 +21,43 @@ function StoreProvider({ initialState, children }) {
       {children}
     </StoreContext.Provider>
   )
+}
+
+const makeTodo = todo => ({
+ id: Math.ceil(Math.random() * 100000),
+ ...todo
+});
+  
+function useTodos() {
+
+  const [{ todos, filterType }, setStore] = React.useContext(StoreContext);
+
+  const toggleTodo = id => {
+    setStore(draft => {
+      const todo = draft.todos.find(d => d.id === id);
+      todo.done = !todo.done;
+    });
+  }
+
+  const addTodo = name => {
+    setStore(draft => {
+      draft.todos.push(makeTodo({ name }))
+    });
+  }
+
+  const setFilterType = type => {
+    setStore(draft => {
+      draft.filterType = type;
+    })
+  }
+
+  return {
+    todos,
+    addTodo,
+    toggleTodo,
+    filterType,
+    setFilterType,
+  }
 }
 
 const initialState = {
@@ -62,26 +97,24 @@ export default function App() {
 
 function FilterBar() {
 
-  const [{ filterType }, setStore ] = React.useContext(StoreContext);
+  const { filterType, setFilterType } = useTodos();
 
   const handleFilterTypeChange = type => {
-    setStore(draft => {
-      draft.filterType = type;
-    })
+    setFilterType(type);
   }
 
   return (
     <div>
       <Filter
-        onClick={() => handleFilterTypeChange('pending')}
+        onClick={() => setFilterType('pending')}
         active={filterType === 'pending'}
       > Pending </Filter>
       <Filter
-        onClick={() => handleFilterTypeChange('done')}
+        onClick={() => setFilterType('done')}
         active={filterType === 'done'}
       > Done </Filter>
       <Filter
-        onClick={() => handleFilterTypeChange('all')}
+        onClick={() => setFilterType('all')}
         active={filterType === 'all'}
       > All </Filter>
     </div>
@@ -101,7 +134,7 @@ function Filter({ active, children, ...rest }) {
 }
 
 function Todos() {
-  const [{ filterType, todos }] = React.useContext(StoreContext);
+  const { filterType, todos } = useTodos();
 
   let filteredTodos;
 
@@ -132,33 +165,24 @@ function Todos() {
 }
 
 function Todo({ id, name, done }) {
-  const [, setStore] = React.useContext(StoreContext);
-
-  const handleToggle = () => {
-    setStore(draft => {
-      const todo = draft.todos.find(d => d.id === id);
-      todo.done = !todo.done;
-    });
-  }
+  const { toggleTodo } = useTodos(); 
 
   return (
     <Flash
       type="div"
       style={{ padding: ".25rem", textDecoration: done ? "line-through" : "none" }}
     >
-      <button onClick={handleToggle}>✅</button> {name}
+      <button onClick={() => toggleTodo(id)}>✅</button> {name}
     </Flash>
   );
 }
 
 function AddTodo() {
-  const [, setTodos] = React.useContext(StoreContext);
+  const { addTodo } = useTodos();
   const [value, setValue] = React.useState("");
 
-  const addTodo = () => {
-    setTodos(draft => {
-      draft.todos.push(makeTodo({ name: value }))
-    });
+  const handleAddTodo = () => {
+    addTodo(value)
     setValue('');
   };
 
@@ -172,7 +196,7 @@ function AddTodo() {
     <Flash type="div">
       <form onSubmit={handleSubmit}>
         <input value={value} onChange={handleOnChange} />{" "}
-        <button onClick={() => addTodo()} type="submit">Add</button>
+        <button onClick={() => handleAddTodo()} type="submit">Add</button>
       </form>
     </Flash>
   );
